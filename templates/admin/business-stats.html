@@ -1,0 +1,179 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+{% block after_related_objects %}
+    <head>
+        <meta charset="UTF-8">
+        <title>Stats</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
+    </head>
+    <body>
+
+    <style type="text/css">
+        .charts {
+            width: 45%;
+            margin-left: 5%;
+        }
+
+        .charts h1 {
+            text-align: center;
+            font-weight: bold;
+            color: #1a1919;
+            font-family: monospace;
+            font-size: 30px;
+        }
+
+        .container {
+            margin-left: -5%;
+            display: flex;
+        }
+    </style>
+    <div class="container">
+        <div class="charts">
+            <div>
+                <h1>Call's</h1>
+                <canvas id="callsChart"></canvas>
+            </div>
+            <div>
+                <h1>Click's</h1>
+                <canvas id="clickChart"></canvas>
+            </div>
+        </div>
+        <div class="charts">
+            <div>
+                <h1>Message's</h1>
+                <canvas id="messageChart"></canvas>
+            </div>
+            <div>
+                <h1>View's</h1>
+                <canvas id="viewChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        const businessID = {{ object_id }}
+            fetch(`https://${location.host}/business/v1/stats/${businessID}/`, {
+                credentials: "same-origin",
+                method: 'GET',
+                headers: {
+                    'Cookie': document.cookie.slice(document.cookie.search('sessionid'), document.cookie.length).split(';')[0],
+                }
+            }).then(response => {
+                return response
+                    .json()
+            }).then(data => {
+                const calls = document.getElementById('callsChart').getContext('2d')
+                new Chart(calls, {
+                    type: 'line',
+                    data: {
+                        labels: data?.call_count?.map(call => {
+                            return call.date
+                        }),
+                        datasets: [{
+                            data: data?.call_count?.map(call => {
+                                return call.count
+                            }),
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: false
+                        }
+                    }
+                });
+
+                const click = document.getElementById('clickChart').getContext('2d')
+                new Chart(click, {
+                    type: 'line',
+                    data: {
+                        labels: data?.click_count?.map(call => {
+                            return call.date
+                        }),
+                        datasets: [{
+                            data: data?.click_count?.map(call => {
+                                return call.count
+                            }),
+                            backgroundColor: 'rgba(172,99,255,0.2)',
+                            borderColor: 'rgba(172, 99, 255, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: false
+                        }
+                    }
+                });
+
+                const message = document.getElementById('messageChart').getContext('2d')
+                new Chart(message, {
+                    type: 'line',
+                    data: {
+                        labels: data?.message_count?.map(call => {
+                            return call.date
+                        }),
+                        datasets: [{
+                            data: data?.message_count?.map(call => {
+                                return call.count
+                            }),
+                            backgroundColor: 'rgba(99,148,255,0.2)',
+                            borderColor: 'rgba(99, 148, 255, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: false
+                        }
+                    }
+                });
+                const views = document.getElementById('viewChart').getContext('2d')
+                new Chart(views, {
+                    type: 'line',
+                    data: {
+                        labels: data?.view_count?.map(call => {
+                            return call.date
+                        }),
+                        datasets: [{
+                            data: data?.view_count?.map(call => {
+                                return call.count
+                            }),
+                            backgroundColor: 'rgba(99,148,255,0.2)',
+                            borderColor: 'rgba(99, 148, 255, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: false
+                        }
+                    }
+                });
+            })
+    </script>
+
+    </body>
+{% endblock %}

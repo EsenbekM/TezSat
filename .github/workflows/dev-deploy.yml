@@ -1,0 +1,47 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build image
+        run: docker build --tag ${{ secrets.IMAGE_NAME }} .
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Push image
+        run: |
+          IMAGE_ID=${{ secrets.DOCKER_REGISTRY_URL }}/${{ secrets.DOCKER_REPOSITORY_NAME }}/${{ secrets.IMAGE_NAME }}
+          VERSION=dev
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+
+          doctl registry login
+          docker image tag ${{ secrets.IMAGE_NAME }} $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
+      - name: Update stack with new image
+        uses: appleboy/ssh-action@master
+        env:
+          IMAGE_ID: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ secrets.DOCKER_REPOSITORY_NAME }}/${{ secrets.IMAGE_NAME }}
+          VERSION: dev
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{  secrets.KEY }}
+          port: ${{ secrets.DEV_PORT }}
+          envs: VERSION, IMAGE_ID
+          script: |
+            cd tezsat_server_help
+            docker service update --image $IMAGE_ID:$VERSION --with-registry-auth t_tezsat
+            docker service update --image $IMAGE_ID:$VERSION --with-registry-auth t_tezsat-worker

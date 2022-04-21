@@ -1,0 +1,80 @@
+version: "3.7"
+
+networks:
+  docker-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  media:
+  static:
+
+services:
+  redis:
+    restart: always
+    image: redis:alpine
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - docker-net
+
+  postgres:
+    image: postgres:12-alpine
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_PASSWORD=dbCXeDTR5vFhZkxRCq
+      - POSTGRES_DB=tezsat
+      - POSTGRES_USER=tezsat
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - docker-net
+
+  tezsat: &tezsat
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    volumes:
+      - media:/app/media/
+      - static:/app/static/
+      - ./:/app/
+    environment:
+      - SECRET_KEY=rwnY89p5wduKE5nK3mqQWrMwLUb2bqNP5Q3nDZkemnBbtwp2P5RmTLbjtL3ysBx8
+      - DEBUG=True
+      - DATABASE_URL=postgres://tezsat:dbCXeDTR5vFhZkxRCq@postgres:5432/tezsat
+      - CORS_ORIGIN_ALLOW_ALL=True
+      - FIREBASE_SERVICE_ACCOUNT_KEY=./service_account.json
+      - REDIS_URL=redis://redis:6379
+      - LOGGING_LEVEL=INFO
+      - ENVIRONMENT=LOCAL
+    depends_on:
+      - postgres
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - docker-net
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --no-input &&
+      python manage.py runserver 0.0.0.0:80"
+
+
+  tezsat_worker:
+    <<: *tezsat
+    ports: []
+    command: ["python", "manage.py", "qcluster"]
